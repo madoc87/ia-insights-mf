@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, Suspense } from "react";
 import { useDropzone } from "react-dropzone";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { format } from 'date-fns';
@@ -8,6 +8,7 @@ import { ptBR } from 'date-fns/locale';
 import { Toaster } from "@/components/ui/toaster"
 import InfoTooltip from "@/components/InfoTooltip";
 import { Progress } from "@/components/ui/progress"
+import { PrintButton } from '@/components/PrintButton'
 // import { utcToZonedTime, format } from 'date-fns-tz';
 import {
     Table,
@@ -23,6 +24,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
+  
   import {
     Bar,
     BarChart,
@@ -56,8 +58,12 @@ const costPerMessage = 0.10;
 const averageSaleValue = 149.9;
 
 export default function Home() {
+  
+  
   const [csvData, setCsvData] = useState<CampaignData[]>([]);
-
+  
+  // const printRef = useRef<HTMLDivElement>(null);
+  
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     const reader = new FileReader();
@@ -92,66 +98,58 @@ export default function Home() {
     return data;
   };
 
-  const campaignNames = [...new Set(csvData.map((row) => row["Campanha"]).filter(Boolean))];
+  const campaignNames = useMemo(() => {
+    return [...new Set(csvData.map((row) => row["Campanha"]).filter(Boolean))];
+  }, [csvData]);
 
-  const campaignDate = () => {
+  const campaignDateValue = useMemo(() => {
     const datesEnvio = csvData.map((row) => row["Dt.Envio"]).filter(Boolean);
     const datesInclusao = csvData.map((row) => row["Dt.Inclusão"]).filter(Boolean);
-
     const rawDate = datesEnvio.length > 0 ? datesEnvio[0] : datesInclusao.length > 0 ? datesInclusao[0] : null;
-
     const timeZone = 'America/Sao_Paulo'; // Ajuste para o fuso horário desejado
-
-    // return rawDate
-    //   ? format(utcToZonedTime(new Date(rawDate), timeZone), 'dd/MM/yyyy', { locale: ptBR })
-    //   : "N/A";
     return rawDate ? format(new Date(rawDate), 'dd/MM/yyyy', { locale: ptBR }) : "N/A";
-  };
+  }, [csvData]);
 
 //Calcula o total de clientes únicos filtrando apenas 1 linha por campanha que existe e somando os valores usando a coluna Qtd.Cli.Campanha
   // const totalClientes = () => {
-  //   const uniqueCampaigns = [...new Set(csvData.map((row) => row["Campanha"]).filter(Boolean))];
+  //   const uniqueCampaigns = useMemo(() => [...new Set(csvData.map((row) => row["Campanha"]).filter(Boolean))], [csvData]);
   //   let total = 0;
   //   uniqueCampaigns.forEach(campaignName => {
   //     const campaignData = csvData.filter(row => row["Campanha"] === campaignName);
   //     if (campaignData && campaignData.length > 0) {
   //       // const qtdCliCampanha = parseInt(campaignData.reduce((sum, row) => sum + Number(row["Qtd.Cli.Campanha"] || 0), 0), 10);
   //       const qtdCliCampanha = parseInt(campaignData.reduce((sum, row) => sum + Number(row["Qtd.Cli.Campanha"] || "0"), 0).toString(), 10);
-  //       if (!isNaN(qtdCliCampanha)) {
+  //       if (!isNaN(qtdCliCampanha)) { //
   //         total += qtdCliCampanha;
   //       }
   //     }
   //   });
   //   return total;
   // };
-
-
 //Calcula o total de clientes únicos usando a coluna CPFs/CNPJs
-  const totalClientes = () => {
+  const totalClientesValue = useMemo(() => {
     let total = 0;
     // Cria um conjunto (Set) de CPFs/CNPJs únicos
-    const uniqueCPFs = new Set(csvData.map(row => row["CNPJ/CPF"]).filter(Boolean));
+    const uniqueCPFs = new Set(csvData.map(row => row["Cód.TMK"]).filter(Boolean));
     // Retorna o tamanho do conjunto (número de CPFs únicos)
     total = uniqueCPFs.size;
     return total;
-  };
-  
-  
+  }, [csvData]);
 
+  const totalDisparos = useMemo(() => csvData.length, [csvData]);
 
-  const totalClientesValue = totalClientes();
-  const totalDisparos = csvData.length;
-  const totalRespostas = csvData.filter((row) => row["Nome WhatsApp"]).length;
+  const totalRespostas = useMemo(() => {
+    return csvData.filter((row) => row["Nome WhatsApp"]).length;
+  }, [csvData]);
 
-  const statusCounts = () => {
+  const { data: chartData, totalVendasCalc } = useMemo(() => {
     const uniqueClientsMap = new Map();
     const statusCountsMap = new Map();
     let totalVendasCalc = 0;
-
     const filteredData = csvData.filter(row => row["Nome WhatsApp"]);
 
     filteredData.forEach((row) => {
-      const client = row["CNPJ/CPF"];
+      const client = row["Cód.TMK"];
       const status = row["Status"];
 
       if (!client) return;
@@ -161,7 +159,7 @@ export default function Home() {
         statusCountsMap.set(status, (statusCountsMap.get(status) || 0) + 1);
       }
 
-      if (status === "Venda IA" || status === "Venda manual") {
+      if (status === "Venda IA" || status === "Venda pela IA" || status === "Venda manual") {
         totalVendasCalc += 1;
       }
     });
@@ -172,16 +170,18 @@ export default function Home() {
     });
 
     return { data, totalVendasCalc };
-  };
+  }, [csvData]);
 
-  const { data: chartData, totalVendasCalc } = statusCounts();
+  const totalVendas = useMemo(() => totalVendasCalc, [totalVendasCalc]);
 
-  const totalVendas = totalVendasCalc;
-  const mediaValorVendido = totalVendas * averageSaleValue;
-  const percentualRespostas = (totalRespostas / totalClientesValue) * 100 || 0;
-  const taxaConversaoClientes = (totalVendas / totalClientesValue) * 100 || 0;
-  const taxaConversaoRespostas = (totalVendas / totalRespostas) * 100 || 0;
-  const custoTotal = totalDisparos * costPerMessage;
+  const mediaValorVendido = useMemo(() => totalVendas * averageSaleValue, [totalVendas, averageSaleValue]);
+
+  const percentualRespostas = useMemo(() => (totalRespostas / totalClientesValue) * 100 || 0, [totalRespostas, totalClientesValue]);
+
+  const taxaConversaoClientes = useMemo(() => (totalVendas / totalClientesValue) * 100 || 0, [totalVendas, totalClientesValue]);
+  const taxaConversaoRespostas = useMemo(() => (totalVendas / totalRespostas) * 100 || 0, [totalVendas, totalRespostas]);
+  const custoTotal = useMemo(() => totalDisparos * costPerMessage, [totalDisparos, costPerMessage]);
+
   const iconSize = "h-4 w-4"
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2">
@@ -207,7 +207,7 @@ export default function Home() {
                 <span>Campanhas</span>
               </div>
               <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe a lista dos nomes das campanhas únicas encontradas." 
               />
             </CardHeader>
               <CardContent>
@@ -227,10 +227,10 @@ export default function Home() {
                 <span>Data de Disparo</span>
               </div>
               <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o dia do disparo da mensagem." 
               />
             </CardHeader>
-              <CardContent>{campaignDate()}</CardContent>
+              <CardContent>{campaignDateValue}</CardContent>
             </Card>
 
 
@@ -242,7 +242,7 @@ export default function Home() {
                 <span>Total Clientes</span>
               </div>
               <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o número total de clientes únicos encontrados." 
               />
             </CardHeader>
               <CardContent>{totalClientesValue}</CardContent>
@@ -257,7 +257,7 @@ export default function Home() {
                   <span>Total Disparos</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o número total de mensagens que foram enviadas. Considerando que um cliente pode te varios números cadastrados." 
               />
               </CardHeader>
               <CardContent>{totalDisparos}</CardContent>
@@ -272,7 +272,7 @@ export default function Home() {
                   <span>Total Respostas</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o número total de clientes que responderam a mensagem." 
               />
               </CardHeader>
               <CardContent>{totalRespostas}</CardContent>
@@ -287,7 +287,7 @@ export default function Home() {
                   <span>Custo Total</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe um média do valor gasto com o envio das mensagens nas campanhas desse arquivo CSV carregado. Calculo: Total de disparos x 0,1 (Custo por mensagem no Blip)" 
               />
               </CardHeader>
               <CardContent>{custoTotal.toLocaleString("pt-BR", {
@@ -305,7 +305,7 @@ export default function Home() {
                   <span>Total de Vendas</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o valor total de vendas encontradas. Esse valor é uma soma das Venda IA + Vendas Manual" 
               />
               </CardHeader>
               <CardContent>
@@ -322,7 +322,7 @@ export default function Home() {
                   <span>Média de valor vendido</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe uma estimativa de valor baseado no número de vendas. Para esse calculo cada venda é multiplicada por R$ 149,90. Calculo: Total de Vendas x 149,90." 
                 className="text-white"
               />
               </CardHeader>
@@ -343,7 +343,7 @@ export default function Home() {
                   <span>Percentual de Respostas (Respostas/Clientes)</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o percentual de respostas. Esse percentual é calculado dividindo o total de respostas pelo total de clientes únicos. Calculo: (Total de respostas / Total de clientes)*100." 
               />
               </CardHeader>
               <CardContent>
@@ -361,7 +361,7 @@ export default function Home() {
                   <span>Taxa de Conversão (Vendas/Clientes)</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o percentual da taxa de conversão da campanha. Esse percentual é calculado dividindo o total de vendas pelo total de clientes únicos. Calculo: (Total de vendas / Total de clientes)*100."
               />
               </CardHeader>
               <CardContent>
@@ -379,7 +379,7 @@ export default function Home() {
                   <span>Taxa de Conversão (Vendas/Respostas)</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esta seção exibe o percentual da taxa de conversão com base no número de respostas. Esse percentual é calculado dividindo o total de vendas pelo total de respostas. Calculo: (Total de vendas / Total de respostas)*100."
               />
               </CardHeader>
               <CardContent>
@@ -398,7 +398,7 @@ export default function Home() {
                   <span>Gráfico 1 de Status</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Esse grafico exibe o número de cada status da campanha." 
               />
               </CardHeader>
               <CardContent>
@@ -470,7 +470,7 @@ export default function Home() {
                   <span>Tabela de Status</span>
                 </div>
                 <InfoTooltip 
-                description="Esta seção exibe a lista de campanhas únicas encontradas no arquivo CSV carregado." 
+                description="Essa tabela exibe o número de cada status da campanha." 
               />
               </CardHeader>
               <CardContent>

@@ -18,7 +18,7 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ description, className }) => 
       <HoverCardTrigger asChild>
         <IoMdInformationCircleOutline className={triggerClassName} />
       </HoverCardTrigger>
-      <HoverCardContent sideOffset={5} className="w-80 bg-white">
+      <HoverCardContent sideOffset={5} className="w-80 bg-white text-slate-600">
         <p className="text-sm">{description}</p>
       </HoverCardContent>
     </HoverCard>

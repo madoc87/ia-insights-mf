@@ -103,7 +103,3 @@ a soma dos valores da soma dos números dos status "Venda IA" e "Venda manual"
 9 - Taxa de Conversão (Vendas/Clientes)
 
 10 - Taxa de Conversão (Vendas/Respostas)
-
-Link da planilha que uso para apresentar os resultados:
-https://docs.google.com/spreadsheets/d/1HkyTZM9v_GfFGvc-mEQExq0wrCrKo5kSk006Ff2Mp2A/edit?usp=sharing
-  
