@@ -79,4 +79,32 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  .no-print {
+  /* Esta classe esconde elementos durante a impressão */
+}
+
+.print-only {
+  display: none;
+}
+
+
+/* ======================== media print =================================== */
+
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  body {
+    font-family: Arial, sans-serif;
+    color: black !important;
+  }
+}
+
 }

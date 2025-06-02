@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, Suspense } from "react";
+import { useState, useCallback, useMemo, Suspense, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { format } from 'date-fns';
@@ -54,7 +54,10 @@ type CampaignData = {
   [key: string]: string;
 };
 
+// Custo por mensagem - Valor atual é de R$ 0,10 por mensagem por estar sendo utilizada a mensagem de Utilidade pelo Blip
 const costPerMessage = 0.10;
+
+// Valor medio da venda dos produto
 const averageSaleValue = 149.9;
 
 export default function Home() {
@@ -62,7 +65,7 @@ export default function Home() {
   
   const [csvData, setCsvData] = useState<CampaignData[]>([]);
   
-  // const printRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
   
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -186,316 +189,292 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2">
       <div className="container mx-auto px-4">
-        <div {...getRootProps()} className="rounded-md border-2 border-dashed border-primary/30 p-6 text-center cursor-pointer">
-          <input {...getInputProps()} />
-          {isDragActive ? (
-            <p>Arraste o arquivo aqui...</p>
-          ) : (
-            <p>Arraste e solte o arquivo CSV aqui, ou clique para selecionar o arquivo</p>
-          )}
+        {/* Área de upload - não será impressa */}
+        <div className="no-print">
+          <div {...getRootProps()} className="rounded-md border-2 border-dashed border-primary/30 p-6 text-center cursor-pointer">
+            <input {...getInputProps()} />
+            {isDragActive ? (
+              <p>Arraste o arquivo aqui...</p>
+            ) : (
+              <p>Arraste e solte o arquivo CSV aqui, ou clique para selecionar o arquivo</p>
+            )}
+          </div>
         </div>
 
         {csvData.length > 0 && (
-          <div className="mt-10 mb-10 grid grid-cols- md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <>
+            {/* Botão de exportação - não será impresso */}
+            <div className="no-print mt-4 flex justify-end">
+              <PrintButton contentRef={printRef} />
+            </div>
 
-
-
-            <Card className={"lg:col-span-4"}>
-            <CardHeader className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <FaBullhorn className={`${iconSize} text-primary`} />
-                <span>Campanhas</span>
+            {/* Conteúdo que será impresso */}
+            <div ref={printRef}>
+              {/* Header do relatório para impressão */}
+              <div className="mb-6 text-center print-only">
+                <h1 className="text-2xl font-bold mb-2">Relatório de Dashboard - Mundo dos Filtros</h1>
+                <p className="text-gray-600">Data de geração: {new Date().toLocaleDateString('pt-BR')}</p>
+                {/* <p className="text-gray-600">Campanha: {campaignNames.join(', ')}</p> */}
               </div>
-              <InfoTooltip 
-                description="Esta seção exibe a lista dos nomes das campanhas únicas encontradas." 
-              />
-            </CardHeader>
-              <CardContent>
-                {campaignNames.map((name, index) => (
-                  <div key={index}>{name}</div>
-                ))}
-              </CardContent>
-            </Card>
 
-
-
-
-            <Card>
-            <CardHeader className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <MdCalendarToday className={`${iconSize} text-primary`} />
-                <span>Data de Disparo</span>
-              </div>
-              <InfoTooltip 
-                description="Esta seção exibe o dia do disparo da mensagem." 
-              />
-            </CardHeader>
-              <CardContent>{campaignDateValue}</CardContent>
-            </Card>
-
-
-
-            <Card>
-            <CardHeader className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <FaUsers className={`${iconSize} text-primary`} />
-                <span>Total Clientes</span>
-              </div>
-              <InfoTooltip 
-                description="Esta seção exibe o número total de clientes únicos encontrados." 
-              />
-            </CardHeader>
-              <CardContent>{totalClientesValue}</CardContent>
-            </Card>
-
-
-
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <FaPaperPlane className={`${iconSize} text-primary`} />
-                  <span>Total Disparos</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe o número total de mensagens que foram enviadas. Considerando que um cliente pode te varios números cadastrados." 
-              />
-              </CardHeader>
-              <CardContent>{totalDisparos}</CardContent>
-            </Card>
-
-
-
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <MdChatBubbleOutline className={`${iconSize} text-primary`} />
-                  <span>Total Respostas</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe o número total de clientes que responderam a mensagem." 
-              />
-              </CardHeader>
-              <CardContent>{totalRespostas}</CardContent>
-            </Card>
-
-
-
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <FaMoneyBillWave className={`${iconSize} text-primary`} />
-                  <span>Custo Total</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe um média do valor gasto com o envio das mensagens nas campanhas desse arquivo CSV carregado. Calculo: Total de disparos x 0,1 (Custo por mensagem no Blip)" 
-              />
-              </CardHeader>
-              <CardContent>{custoTotal.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}</CardContent>
-            </Card>
-
-
-
-            <Card>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <FaShoppingCart className={`${iconSize} text-primary`} />
-                  <span>Total de Vendas</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe o valor total de vendas encontradas. Esse valor é uma soma das Venda IA + Vendas Manual" 
-              />
-              </CardHeader>
-              <CardContent>
-                {!isNaN(totalVendas) ? totalVendas : 'N/A'}
-              </CardContent>
-            </Card>
-
-
-            
-            <Card className={"lg:col-span-2 bg-primary border-primary/50 text-white"}>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <FaChartLine className={`${iconSize} text-white`} />
-                  <span>Média de valor vendido</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe uma estimativa de valor baseado no número de vendas. Para esse calculo cada venda é multiplicada por R$ 149,90. Calculo: Total de Vendas x 149,90." 
-                className="text-white"
-              />
-              </CardHeader>
-              <CardContent>{mediaValorVendido.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
-              </CardContent>
-            </Card>
-
-
-
-
-            <Card className={"lg:col-span-2"}>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <FaPercent className="h-3 w-3 text-primary" />
-                  <span>Percentual de Respostas (Respostas/Clientes)</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe o percentual de respostas. Esse percentual é calculado dividindo o total de respostas pelo total de clientes únicos. Calculo: (Total de respostas / Total de clientes)*100." 
-              />
-              </CardHeader>
-              <CardContent>
-                {percentualRespostas.toFixed(2)}%
-                {/*<Progress value={percentualRespostas}  /> */}
-              </CardContent>
-            </Card>
-
-
-
-            <Card className={"lg:col-span-2"}>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <IoFunnelOutline className={`${iconSize} text-primary`} />
-                  <span>Taxa de Conversão (Vendas/Clientes)</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe o percentual da taxa de conversão da campanha. Esse percentual é calculado dividindo o total de vendas pelo total de clientes únicos. Calculo: (Total de vendas / Total de clientes)*100."
-              />
-              </CardHeader>
-              <CardContent>
-                {taxaConversaoClientes.toFixed(2)}%
-                <Progress value={taxaConversaoClientes}  />
-              </CardContent>
-            </Card>
-
-
-
-            <Card className={"lg:col-span-2"}>
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <IoFunnelSharp className={`${iconSize} text-primary`} />
-                  <span>Taxa de Conversão (Vendas/Respostas)</span>
-                </div>
-                <InfoTooltip 
-                description="Esta seção exibe o percentual da taxa de conversão com base no número de respostas. Esse percentual é calculado dividindo o total de vendas pelo total de respostas. Calculo: (Total de vendas / Total de respostas)*100."
-              />
-              </CardHeader>
-              <CardContent>
-                {taxaConversaoRespostas.toFixed(2)}%
-                <Progress value={taxaConversaoRespostas}  />
-              </CardContent>
-            </Card>
-            
-
-
-            {/* ############################### Inicio do Grafico 1 ############################### */}
-            <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <FaChartBar className={`${iconSize} text-primary`} />
-                  <span>Gráfico 1 de Status</span>
-                </div>
-                <InfoTooltip 
-                description="Esse grafico exibe o número de cada status da campanha." 
-              />
-              </CardHeader>
-              <CardContent>
-              <ChartContainer config={chartConfig}>
-                <BarChart 
-                  accessibilityLayer 
-                  width={600} 
-                  height={300} 
-                  data={chartData}
-                  margin={{left: 0,}}
-                  // className="text-background bg-background"
-                >
-                    {/* <CartesianGrid vertical={true} /> */}
-                    {/* <CartesianGrid horizontal={true} /> */}
-                    <XAxis 
-                      dataKey="name"
-                      tickLine={false}
-                      tickMargin={10}
-                      axisLine={false}
-                      tickFormatter={(valor) => valor.slice(0, 7)}
-                      fontSize={12}
+              {/* Grid de cards */}
+              <div className="mt-10 mb-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                
+                <Card className={"lg:col-span-4"}>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaBullhorn className={`${iconSize} text-primary`} />
+                      <span>Campanhas</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe a lista dos nomes das campanhas únicas encontradas." 
                     />
-                    <YAxis />
-                    {/* <Tooltip /> */}
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent 
-                        // hideLabel 
-                        className="font-mono font-medium justify-start"
-                      />}
-                    />
-
-                    <Bar 
-                      dataKey="valor"
-                      fill="var(--color-desktop)"
-                      radius={8}
-                    >
-                      <LabelList
-                        position="top"
-                        offset={5}
-                        className="fill-foreground"
-                        fontSize={12}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-            {/* ############################### Fim do Grafico ############################### */}
-
-            {/* ############################### Inicio do Grafico 2 ############################### */}
-            {/* <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-                          <CardHeader>Gráfico de Status</CardHeader>
-                          <CardContent>
-                            <BarChart width={600} height={300} data={chartData}>
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip />
-                              <Bar dataKey="value" fill="#8884d8" />
-                            </BarChart>
-                          </CardContent>
-                        </Card> */}
-            {/* ############################### Fim do Grafico ############################### */}
-
-            <Card className="col-span-1 md:col-span-2 lg:col-span-3">
-              <CardHeader className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <BsTable className={`${iconSize} text-primary`} />
-                  <span>Tabela de Status</span>
-                </div>
-                <InfoTooltip 
-                description="Essa tabela exibe o número de cada status da campanha." 
-              />
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="pl-8">Núm Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {chartData.map((item) => (
-                      <TableRow key={item.name}>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell className="pl-8">{item.valor}</TableCell>
-                      </TableRow>
+                  </CardHeader>
+                  <CardContent>
+                    {campaignNames.map((name, index) => (
+                      <div key={index}>{name}</div>
                     ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <MdCalendarToday className={`${iconSize} text-primary`} />
+                      <span>Data de Disparo</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o dia do disparo da mensagem." 
+                    />
+                  </CardHeader>
+                  <CardContent>{campaignDateValue}</CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaUsers className={`${iconSize} text-primary`} />
+                      <span>Total Clientes</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o número total de clientes únicos encontrados." 
+                    />
+                  </CardHeader>
+                  <CardContent>{totalClientesValue}</CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaPaperPlane className={`${iconSize} text-primary`} />
+                      <span>Total Disparos</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o número total de mensagens que foram enviadas. Considerando que um cliente pode te varios números cadastrados." 
+                    />
+                  </CardHeader>
+                  <CardContent>{totalDisparos}</CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <MdChatBubbleOutline className={`${iconSize} text-primary`} />
+                      <span>Total Respostas</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o número total de clientes que responderam a mensagem." 
+                    />
+                  </CardHeader>
+                  <CardContent>{totalRespostas}</CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaMoneyBillWave className={`${iconSize} text-primary`} />
+                      <span>Custo Total</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe um média do valor gasto com o envio das mensagens nas campanhas desse arquivo CSV carregado. Calculo: Total de disparos x 0,1 (Custo por mensagem no Blip)" 
+                    />
+                  </CardHeader>
+                  <CardContent>{custoTotal.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}</CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaShoppingCart className={`${iconSize} text-primary`} />
+                      <span>Total de Vendas</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o valor total de vendas encontradas. Esse valor é uma soma das Venda IA + Vendas Manual" 
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    {!isNaN(totalVendas) ? totalVendas : 'N/A'}
+                  </CardContent>
+                </Card>
+
+                <Card className={"lg:col-span-2 bg-primary border-primary/50 text-white"}>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaChartLine className={`${iconSize} text-white`} />
+                      <span>Média de valor vendido</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe uma estimativa de valor baseado no número de vendas. Para esse calculo cada venda é multiplicada por R$ 149,90. Calculo: Total de Vendas x 149,90." 
+                      className="text-white"
+                    />
+                  </CardHeader>
+                  <CardContent>{mediaValorVendido.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                  </CardContent>
+                </Card>
+
+                <Card className={"lg:col-span-2"}>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaPercent className="h-3 w-3 text-primary" />
+                      <span>Percentual de Respostas (Respostas/Clientes)</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o percentual de respostas. Esse percentual é calculado dividindo o total de respostas pelo total de clientes únicos. Calculo: (Total de respostas / Total de clientes)*100." 
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    {percentualRespostas.toFixed(2)}%
+                  </CardContent>
+                </Card>
+
+                <Card className={"lg:col-span-2"}>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <IoFunnelOutline className={`${iconSize} text-primary`} />
+                      <span>Taxa de Conversão (Vendas/Clientes)</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o percentual da taxa de conversão da campanha. Esse percentual é calculado dividindo o total de vendas pelo total de clientes únicos. Calculo: (Total de vendas / Total de clientes)*100."
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    {taxaConversaoClientes.toFixed(2)}%
+                    <Progress value={taxaConversaoClientes}  />
+                  </CardContent>
+                </Card>
+
+                <Card className={"lg:col-span-2"}>
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <IoFunnelSharp className={`${iconSize} text-primary`} />
+                      <span>Taxa de Conversão (Vendas/Respostas)</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esta seção exibe o percentual da taxa de conversão com base no número de respostas. Esse percentual é calculado dividindo o total de vendas pelo total de respostas. Calculo: (Total de vendas / Total de respostas)*100."
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    {taxaConversaoRespostas.toFixed(2)}%
+                    <Progress value={taxaConversaoRespostas}  />
+                  </CardContent>
+                </Card>
+
+                {/* Gráfico */}
+                <Card className="col-span-1 md:col-span-2 lg:col-span-3">
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <FaChartBar className={`${iconSize} text-primary`} />
+                      <span>Gráfico 1 de Status</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Esse grafico exibe o número de cada status da campanha." 
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={chartConfig}>
+                      <BarChart 
+                        accessibilityLayer 
+                        width={600} 
+                        height={300} 
+                        data={chartData}
+                        margin={{left: 0,}}
+                      >
+                        <XAxis 
+                          dataKey="name"
+                          tickLine={false}
+                          tickMargin={10}
+                          axisLine={false}
+                          tickFormatter={(valor) => valor.slice(0, 7)}
+                          fontSize={12}
+                        />
+                        <YAxis />
+                        <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent 
+                            className="font-mono font-medium justify-start"
+                          />}
+                        />
+                        <Bar 
+                          dataKey="valor"
+                          fill="var(--color-desktop)"
+                          radius={8}
+                        >
+                          <LabelList
+                            position="top"
+                            offset={5}
+                            className="fill-foreground"
+                            fontSize={12}
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Tabela */}
+                <Card className="col-span-1 md:col-span-2 lg:col-span-3">
+                  <CardHeader className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <BsTable className={`${iconSize} text-primary`} />
+                      <span>Tabela de Status</span>
+                    </div>
+                    <InfoTooltip 
+                      description="Essa tabela exibe o número de cada status da campanha." 
+                    />
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="pl-8">Núm Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {chartData.map((item) => (
+                          <TableRow key={item.name}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="pl-8">{item.valor}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+              </div>
+            </div>
+          </>
         )}
       </div>
       <Toaster />
     </div>
   );
+
 }
