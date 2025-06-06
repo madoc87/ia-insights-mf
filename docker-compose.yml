@@ -5,5 +5,5 @@ services:
       dockerfile: Dockerfile
     container_name: ia-insights-mf
     ports:
-      - "3000:9002"
+      - "3001:9002"
     restart: unless-stopped
