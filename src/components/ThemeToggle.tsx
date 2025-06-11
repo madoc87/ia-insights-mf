@@ -25,7 +25,7 @@ export default function ThemeToggle() {
       className="px-4 py-2 rounded bg-background text-foreground mt-4"
       aria-label="Alternar tema"
     >
-      {dark ? "🌙 Modo Escuro" : "☀️ Modo Claro!!"}
+      {dark ? "🌙 Modo Escuro" : "☀️ Modo Claro!!!"}
     </button>
   );
 }
