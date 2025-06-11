@@ -1,4 +1,4 @@
-12# Firebase Studio!!
+13# Firebase Studio!!
 
 This is a NextJS starter in Firebase Studio.
 
